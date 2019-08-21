@@ -1,10 +1,14 @@
 package one.mixin.android.ui.home
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.KeyEvent
 import android.view.View
 import androidx.core.content.getSystemService
@@ -165,6 +169,7 @@ class MainActivity : BlazeBaseActivity() {
         refreshStickerAlbum()
         rotateSignalPreKey()
         checkRoot()
+        checkBatteryOptimization()
 
         initView()
         handlerCode(intent)
@@ -173,6 +178,19 @@ class MainActivity : BlazeBaseActivity() {
     override fun onStart() {
         super.onStart()
         getSystemService<NotificationManager>()?.cancelAll()
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun checkBatteryOptimization() {
+        getSystemService<PowerManager>()?.let { pm->
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                Intent().apply {
+                    action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                    data = Uri.parse("package:$packageName")
+                    startActivity(this)
+                }
+            }
+        }
     }
 
     private fun delayShowModifyMobile() = lifecycleScope.launch {
