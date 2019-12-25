@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import io.requery.android.database.sqlite.RequerySQLiteOpenHelperFactory
 import one.mixin.android.Constants.DataBase.CURRENT_VERSION
 import one.mixin.android.Constants.DataBase.DB_NAME
 import one.mixin.android.MixinApplication
@@ -105,6 +106,7 @@ abstract class MixinDatabase : RoomDatabase() {
             synchronized(lock) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context, MixinDatabase::class.java, DB_NAME)
+                        .openHelperFactory(RequerySQLiteOpenHelperFactory())
                         .addMigrations(MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
                         .enableMultiInstanceInvalidation()
                         .addCallback(CALLBACK)
@@ -122,6 +124,7 @@ abstract class MixinDatabase : RoomDatabase() {
             synchronized(lock) {
                 if (READINSTANCE == null) {
                     READINSTANCE = Room.databaseBuilder(context, MixinDatabase::class.java, DB_NAME)
+                        .openHelperFactory(RequerySQLiteOpenHelperFactory())
                         .addMigrations(MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
                         .enableMultiInstanceInvalidation()
                         .build()
