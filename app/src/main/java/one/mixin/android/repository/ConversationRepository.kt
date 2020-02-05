@@ -11,7 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import one.mixin.android.Constants.PAGE_SIZE
 import one.mixin.android.api.service.ConversationService
 import one.mixin.android.db.ConversationDao
 import one.mixin.android.db.JobDao
@@ -21,8 +20,10 @@ import one.mixin.android.db.MixinDatabase
 import one.mixin.android.db.ParticipantDao
 import one.mixin.android.db.ParticipantSessionDao
 import one.mixin.android.db.batchMarkReadAndTake
+import one.mixin.android.db.deleteMessage
 import one.mixin.android.di.type.DatabaseCategory
 import one.mixin.android.di.type.DatabaseCategoryEnum
+import one.mixin.android.extension.joinStar
 import one.mixin.android.ui.media.pager.MediaPagerActivity
 import one.mixin.android.util.SINGLE_DB_THREAD
 import one.mixin.android.util.Session
@@ -106,10 +107,10 @@ internal constructor(
         readConversationDao.getConversation(conversationId)
 
     suspend fun fuzzySearchMessage(query: String, limit: Int): List<SearchMessageItem> =
-        readMessageDao.fuzzySearchMessage("$query*", limit)
+        readMessageDao.fuzzySearchMessage(query.joinStar(), limit)
 
     fun fuzzySearchMessageDetail(query: String, conversationId: String) =
-        readMessageDao.fuzzySearchMessageByConversationId("$query*", conversationId)
+        readMessageDao.fuzzySearchMessageByConversationId(query.joinStar(), conversationId)
 
     suspend fun fuzzySearchChat(query: String): List<ChatMinimal> =
         readConversationDao.fuzzySearchChat(query)
@@ -172,7 +173,7 @@ internal constructor(
     suspend fun updateMediaStatus(status: String, messageId: String) =
         messageDao.updateMediaStatusSuspend(status, messageId)
 
-    fun deleteMessage(id: String) = messageDao.deleteMessage(id)
+    fun deleteMessage(id: String) = appDatabase.deleteMessage(id)
 
     suspend fun deleteConversationById(conversationId: String) =
         conversationDao.deleteConversationById(conversationId)
@@ -301,7 +302,7 @@ internal constructor(
     suspend fun insertParticipantSession(ps: List<ParticipantSession>) =
         participantSessionDao.insertListSuspend(ps)
 
-    suspend fun upgradeFtsMessage() = messageDao.upgradeFtsMessage()
+    suspend fun batchQueryMessages(limit: Int, offset: Int) = messageDao.batchQueryMessages(limit, offset)
 
     suspend fun getAnnouncementByConversationId(conversationId: String) = conversationDao.getAnnouncementByConversationId(conversationId)
 }

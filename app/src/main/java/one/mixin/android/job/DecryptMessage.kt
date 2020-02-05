@@ -28,6 +28,7 @@ import one.mixin.android.extension.nowInUtc
 import one.mixin.android.job.BaseJob.Companion.PRIORITY_SEND_ATTACHMENT_MESSAGE
 import one.mixin.android.util.ColorUtil
 import one.mixin.android.util.GsonHelper
+import one.mixin.android.util.MessageFts4Helper
 import one.mixin.android.util.Session
 import one.mixin.android.vo.AppButtonData
 import one.mixin.android.vo.ConversationStatus
@@ -317,6 +318,7 @@ class DecryptMessage : Injector() {
                     }
                 }
                 messageDao.insert(message)
+                MessageFts4Helper.insertOrReplaceMessageFts4(MixinApplication.appContext, message)
                 sendNotificationJob(message, data.source)
             }
             data.category.endsWith("_POST") -> {
@@ -384,6 +386,7 @@ class DecryptMessage : Injector() {
                 }
 
                 messageDao.insert(message)
+                MessageFts4Helper.insertOrReplaceMessageFts4(MixinApplication.appContext, message)
                 MixinApplication.appContext.autoDownload(autoDownloadDocument) {
                     jobManager.addJobInBackground(AttachmentDownloadJob(message))
                 }
