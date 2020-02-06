@@ -11,7 +11,6 @@ import androidx.collection.ArraySet
 import kotlinx.android.synthetic.main.view_pseudo_notification.view.*
 import one.mixin.android.R
 import one.mixin.android.ui.url.isMixinUrl
-import org.jetbrains.anko.backgroundResource
 import org.jetbrains.anko.dip
 
 class PseudoNotificationView : RelativeLayout {
@@ -31,7 +30,6 @@ class PseudoNotificationView : RelativeLayout {
         val size = context.dip(12)
         d.setBounds(0, 0, size, size)
         title_tv.setCompoundDrawables(d, null, null, null)
-        backgroundResource = R.drawable.bg_round_gray
     }
 
     fun addContent(s: String) {

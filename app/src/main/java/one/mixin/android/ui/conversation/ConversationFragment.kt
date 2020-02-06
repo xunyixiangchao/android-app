@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -124,7 +125,7 @@ import one.mixin.android.ui.conversation.markdown.MarkdownActivity
 import one.mixin.android.ui.conversation.preview.PreviewDialogFragment
 import one.mixin.android.ui.conversation.web.WebBottomSheetDialogFragment
 import one.mixin.android.ui.forward.ForwardActivity
-import one.mixin.android.ui.media.DragMediaActivity
+import one.mixin.android.ui.media.pager.MediaPagerActivity
 import one.mixin.android.ui.setting.WalletPasswordFragment
 import one.mixin.android.ui.sticker.StickerActivity
 import one.mixin.android.ui.url.openUrlWithExtraWeb
@@ -170,6 +171,7 @@ import one.mixin.android.widget.buildBottomSheetView
 import one.mixin.android.widget.gallery.ui.GalleryActivity.Companion.IS_VIDEO
 import one.mixin.android.widget.keyboard.KeyboardAwareLinearLayout.OnKeyboardHiddenListener
 import one.mixin.android.widget.keyboard.KeyboardAwareLinearLayout.OnKeyboardShownListener
+import one.mixin.android.widget.linktext.AutoLinkMode
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import timber.log.Timber
@@ -219,7 +221,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private var unreadTipCount: Int = 0
     private val chatAdapter: ConversationAdapter by lazy {
-        ConversationAdapter(keyword, onItemListener, isGroup, !isPlainMessage()).apply {
+        ConversationAdapter(requireContext(), keyword, onItemListener, isGroup, !isPlainMessage(), isBot).apply {
             registerAdapterDataObserver(chatAdapterDataObserver)
         }
     }
@@ -243,8 +245,12 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                         if (context?.sharedPreferences(RefreshConversationJob.PREFERENCES_CONVERSATION)
                                 ?.getBoolean(conversationId, false) == true
                         ) {
-                            showGroupNotification = true
-                            showAlert(0)
+                            chatViewModel.viewModelScope.launch {
+                                group_desc.text = chatViewModel.getAnnouncementByConversationId(conversationId)
+                                group_desc.collapse()
+                                group_desc.requestFocus()
+                            }
+                            group_flag.isVisible = true
                         }
                         val position = if (messageId != null) {
                             unreadCount + 1
@@ -403,7 +409,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             override fun onImageClick(messageItem: MessageItem, view: View) {
                 starTransition = true
                 if (messageItem.isLive()) {
-                    DragMediaActivity.show(
+                    MediaPagerActivity.show(
                         requireActivity(),
                         view,
                         messageItem.conversationId,
@@ -418,7 +424,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 }
                 val file = File(path)
                 if (file.exists()) {
-                    DragMediaActivity.show(
+                    MediaPagerActivity.show(
                         requireActivity(),
                         view,
                         messageItem.conversationId,
@@ -572,8 +578,28 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             }
 
             override fun onPostClick(view: View, messageItem: MessageItem) {
-                // MarkdownActivity.show(requireActivity(), messageItem.content!!)
                 MarkdownActivity.show(requireActivity(), messageItem.content!!)
+            }
+
+            override fun onSayHi() {
+                sendMessage("Hi")
+            }
+
+            override fun onOpenHomePage() {
+                hideIfShowBottomSheet()
+                app?.let {
+                    chat_control.chat_et.hideKeyboard()
+                    recipient?.let { user -> chatViewModel.refreshUser(user.userId, true) }
+                    botWebBottomSheet = WebBottomSheetDialogFragment.newInstance(
+                        it.homeUri,
+                        conversationId,
+                        it.appId,
+                        it.name,
+                        it.icon_url,
+                        it.capabilities
+                    )
+                    botWebBottomSheet?.showNow(parentFragmentManager, WebBottomSheetDialogFragment.TAG)
+                }
             }
 
             override fun onCallClick(messageItem: MessageItem) {
@@ -712,7 +738,6 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             }
     }
 
-    private var showGroupNotification = false
     private var paused = false
     private var starTransition = false
 
@@ -732,8 +757,12 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 .autoDispose(stopScope)
                 .subscribe {
                     if (it.conversationId == conversationId) {
-                        showGroupNotification = true
-                        showAlert()
+                        chatViewModel.viewModelScope.launch {
+                            group_desc.text = chatViewModel.getAnnouncementByConversationId(conversationId)
+                            group_desc.collapse()
+                            group_desc.requestFocus()
+                        }
+                        group_flag.isVisible = true
                     }
                 }
         }
@@ -750,7 +779,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 }
                 reply_view.messageItem?.let {
                     if (it.messageId == event.messageId) {
-                        reply_view.fadeOut()
+                        reply_view.fadeOut(isGone = true)
                         chat_control.showOtherInput()
                         reply_view.messageItem = null
                     }
@@ -902,7 +931,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 true
             }
             reply_view.visibility == VISIBLE -> {
-                reply_view.fadeOut()
+                reply_view.fadeOut(isGone = true)
                 chat_control.showOtherInput()
                 true
             }
@@ -917,8 +946,8 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
         ) {
             chat_control.reset()
         }
-        if (reply_view.visibility == VISIBLE) {
-            reply_view.fadeOut()
+        if (reply_view.isVisible) {
+            reply_view.fadeOut(isGone = true)
             chat_control.showOtherInput()
         }
     }
@@ -1044,7 +1073,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             closeTool()
         }
         reply_view.reply_close_iv.setOnClickListener {
-            reply_view.fadeOut()
+            reply_view.fadeOut(isGone = true)
             chat_control.showOtherInput()
         }
         tool_view.copy_iv.setOnClickListener {
@@ -1109,6 +1138,22 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             closeTool()
         }
 
+        group_desc.movementMethod = LinkMovementMethod()
+        group_desc.addAutoLinkMode(AutoLinkMode.MODE_URL)
+        group_desc.setUrlModeColor(BaseViewHolder.LINK_COLOR)
+        group_desc.setAutoLinkOnClickListener { _, url ->
+            openUrlWithExtraWeb(url, conversationId, parentFragmentManager)
+        }
+        group_flag.setOnClickListener {
+            group_desc.expand()
+        }
+        group_desc.setOnClickListener {
+            group_desc.expand()
+        }
+        group_close.setOnClickListener {
+            requireActivity().sharedPreferences(RefreshConversationJob.PREFERENCES_CONVERSATION).putBoolean(conversationId, false)
+            group_flag.isVisible = false
+        }
         callState.observe(viewLifecycleOwner, Observer { info ->
             chat_control.calling = info.callState != CallService.CallState.STATE_IDLE
         })
@@ -1210,10 +1255,9 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                         unreadTipCount += (list.size - chatAdapter.getRealItemCount())
                     }
                     chatViewModel.viewModelScope.launch {
-                        chatAdapter.hasBottomView = !isGroup &&
-                            !list.isEmpty() &&
-                            recipient?.relationship == UserRelationship.STRANGER.name &&
-                            chatViewModel.isSilence(conversationId, sender.userId)
+                        chatAdapter.hasBottomView = ((isBot && list.isEmpty()) ||
+                            (!isGroup && (!list.isEmpty()) && chatViewModel.isSilence(conversationId, sender.userId))) &&
+                            recipient?.relationship == UserRelationship.STRANGER.name
                     }
                     if (isFirstLoad && messageId == null && unreadCount > 0) {
                         chatAdapter.unreadMsgId = unreadMessageId
@@ -1258,7 +1302,11 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 chatViewModel.indexUnread(conversationId)
             }
             val msgId = messageId
-                ?: chatViewModel.findFirstUnreadMessageId(conversationId, Session.getAccountId()!!)
+                ?: if (unreadCount <= 0) {
+                    null
+                } else {
+                    chatViewModel.findFirstUnreadMessageId(conversationId, unreadCount - 1)
+                }
             liveDataMessage(unreadCount, msgId)
         }
 
@@ -1320,6 +1368,9 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                             ForwardCategory.TEXT.name -> {
                                 item.content?.let { content -> sendMessage(content) }
                             }
+                            ForwardCategory.POST.name -> {
+                                item.content?.let { content -> sendPost(content) }
+                            }
                         }
                     }
                 }
@@ -1355,10 +1406,21 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private fun sendImageMessage(uri: Uri, mimeType: String? = null) {
         createConversation {
-            chatViewModel.sendImageMessage(conversationId, sender, uri, isPlainMessage(), mimeType)
+            chatViewModel.sendImageMessage(
+                conversationId,
+                sender,
+                uri,
+                isPlainMessage(),
+                mimeType,
+                reply_view.messageItem
+            )
                 ?.autoDispose(stopScope)?.subscribe({
                     when (it) {
                         0 -> {
+                            if (reply_view.messageItem != null) {
+                                reply_view.fadeOut(isGone = true)
+                                reply_view.messageItem = null
+                            }
                             scrollToDown()
                             markRead()
                         }
@@ -1401,8 +1463,14 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                     file,
                     duration,
                     waveForm,
-                    isPlainMessage()
+                    isPlainMessage(),
+                    reply_view.messageItem
                 )
+                if (reply_view.messageItem != null) {
+                    reply_view.fadeOut(isGone = true)
+                    reply_view.messageItem = null
+                    chat_control.showOtherInput()
+                }
                 scrollToDown()
             }
         }
@@ -1410,7 +1478,18 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private fun sendVideoMessage(uri: Uri) {
         createConversation {
-            chatViewModel.sendVideoMessage(conversationId, sender.userId, uri, isPlainMessage())
+            chatViewModel.sendVideoMessage(
+                conversationId,
+                sender.userId,
+                uri,
+                isPlainMessage(),
+                replyMessage = reply_view.messageItem
+            )
+            if (reply_view.messageItem != null) {
+                reply_view.fadeOut(isGone = true)
+                reply_view.messageItem = null
+                chat_control.showOtherInput()
+            }
             chat_rv.postDelayed({
                 scrollToDown()
             }, 1000)
@@ -1438,8 +1517,14 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 conversationId,
                 sender,
                 attachment,
-                isPlainMessage()
+                isPlainMessage(),
+                reply_view.messageItem
             )
+            if (reply_view.messageItem != null) {
+                reply_view.fadeOut(isGone = true)
+                reply_view.messageItem = null
+                chat_control.showOtherInput()
+            }
             scrollToDown()
             markRead()
         }
@@ -1458,7 +1543,12 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private fun sendContactMessage(userId: String) {
         createConversation {
-            chatViewModel.sendContactMessage(conversationId, sender, userId, isPlainMessage())
+            chatViewModel.sendContactMessage(conversationId, sender, userId, isPlainMessage(), reply_view.messageItem)
+            if (reply_view.messageItem != null) {
+                reply_view.fadeOut(isGone = true)
+                reply_view.messageItem = null
+                chat_control.showOtherInput()
+            }
             scrollToDown()
             markRead()
         }
@@ -1469,13 +1559,24 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
             chat_control.chat_et.setText("")
             createConversation {
                 chatViewModel.sendTextMessage(conversationId, sender, message, isPlainMessage())
+                chat_control.showOtherInput()
                 scrollToDown()
                 markRead()
             }
         }
     }
 
-    private fun sendReplyMessage(message: String) {
+    private fun sendPost(message: String) {
+        if (message.isNotBlank()) {
+            createConversation {
+                chatViewModel.sendPostMessage(conversationId, sender, message, isPlainMessage())
+                scrollToDown()
+                markRead()
+            }
+        }
+    }
+
+    private fun sendReplyTextMessage(message: String) {
         if (message.isNotBlank() && reply_view.messageItem != null) {
             chat_control.chat_et.setText("")
             createConversation {
@@ -1486,9 +1587,9 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                     reply_view.messageItem!!,
                     isPlainMessage()
                 )
-                reply_view.fadeOut()
-                chat_control.showOtherInput()
+                reply_view.fadeOut(isGone = true)
                 reply_view.messageItem = null
+                chat_control.showOtherInput()
                 scrollToDown()
                 markRead()
             }
@@ -1502,16 +1603,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
     private fun renderGroup() {
         action_bar.avatar_iv.visibility = VISIBLE
         action_bar.avatar_iv.setOnClickListener {
-            showGroupNotification = false
-            hideAlert()
             showGroupBottomSheet(false)
-        }
-        group_flag.setOnClickListener {
-            showGroupNotification = false
-            requireContext().sharedPreferences(RefreshConversationJob.PREFERENCES_CONVERSATION)
-                .putBoolean(conversationId, false)
-            hideAlert()
-            showGroupBottomSheet(true)
         }
         chatViewModel.getConversationById(conversationId).observe(viewLifecycleOwner, Observer {
             it?.let {
@@ -1551,9 +1643,9 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 }
                 mentionAdapter.list = users
                 val text = chat_control.chat_et.text
-                if (mention_layout.isGone && inMentionState(text.toString())) {
+                if (mention_rv.isGone && inMentionState(text.toString())) {
                     submitMentionList(text.toString())
-                    mention_layout.show()
+                    floating_layout.showMention()
                 }
             })
     }
@@ -1960,11 +2052,6 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private fun showAlert(duration: Long = 100) {
         if (isGroup) {
-            if (showGroupNotification) {
-                group_flag.visibility = VISIBLE
-            } else {
-                group_flag.visibility = GONE
-            }
             if (!isBottom) {
                 down_flag.visibility = VISIBLE
             } else {
@@ -1982,17 +2069,8 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
     private fun hideAlert() {
         if (isGroup) {
-            if (showGroupNotification) {
-                group_flag.visibility = VISIBLE
-            } else {
-                group_flag.visibility = GONE
-            }
             if (isBottom) {
-                if (showGroupNotification) {
-                    bg_quick_flag.translationY(requireContext().dpToPx(60f).toFloat(), 100)
-                } else if (isBottom) {
-                    bg_quick_flag.translationY(requireContext().dpToPx(130f).toFloat(), 100)
-                }
+                bg_quick_flag.translationY(requireContext().dpToPx(130f).toFloat(), 100)
             }
         } else {
             bg_quick_flag.translationY(requireContext().dpToPx(130f).toFloat(), 100)
@@ -2212,7 +2290,7 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
 
         override fun onSendClick(text: String) {
             if (reply_view.isVisible && reply_view.messageItem != null) {
-                sendReplyMessage(text)
+                sendReplyTextMessage(text)
             } else {
                 sendMessage(text)
             }
@@ -2292,15 +2370,15 @@ class ConversationFragment : LinkFragment(), OnKeyboardShownListener, OnKeyboard
                 mentionAdapter.keyword = s?.toString()
                 if (mention_rv.adapter != null && inMentionState(s.toString())) {
                     val targetList = submitMentionList(s.toString())
-                    if (mention_layout.isGone) {
-                        mention_layout.show()
+                    if (mention_rv.isGone) {
+                        floating_layout.showMention()
                     } else {
-                        mention_layout.animate2RightHeight(targetList?.size ?: 0)
+                        floating_layout.animate2RightHeight(targetList?.size ?: 0)
                     }
                     mention_rv.layoutManager?.smoothScrollToPosition(mention_rv, null, 0)
                 } else {
-                    if (mention_layout.isVisible) {
-                        mention_layout.hide()
+                    if (mention_rv.isVisible) {
+                        floating_layout.hideMention()
                     }
                 }
             }

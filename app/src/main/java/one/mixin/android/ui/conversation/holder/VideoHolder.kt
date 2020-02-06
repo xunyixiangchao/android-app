@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
+import java.lang.Exception
 import kotlinx.android.synthetic.main.item_chat_video.view.*
 import one.mixin.android.R
 import one.mixin.android.extension.dpToPx
@@ -25,6 +26,7 @@ import one.mixin.android.vo.MediaStatus
 import one.mixin.android.vo.MessageCategory
 import one.mixin.android.vo.MessageItem
 import one.mixin.android.vo.isLive
+import one.mixin.android.vo.isSignal
 import org.jetbrains.anko.dip
 
 class VideoHolder constructor(containerView: View) : MediaHolder(containerView) {
@@ -112,7 +114,11 @@ class VideoHolder constructor(containerView: View) : MediaHolder(containerView) 
             if (messageItem.mediaStatus == MediaStatus.DONE.name) {
                 messageItem.mediaDuration.notNullWithElse({
                     itemView.duration_tv.visibility = VISIBLE
-                    itemView.duration_tv.text = it.toLong().formatMillis()
+                    itemView.duration_tv.text = try {
+                        it.toLong().formatMillis()
+                    } catch (e: Exception) {
+                        ""
+                    }
                 }, {
                     itemView.duration_tv.visibility = GONE
                 })
@@ -229,12 +235,11 @@ class VideoHolder constructor(containerView: View) : MediaHolder(containerView) 
         }
         itemView.chat_time.timeAgoClock(messageItem.createdAt)
 
-        setStatusIcon(isMe, messageItem.status, {
-            it?.setBounds(0, 0, dp12, dp12)
-            TextViewCompat.setCompoundDrawablesRelative(itemView.chat_time, null, null, it, null)
-        }, {
-            TextViewCompat.setCompoundDrawablesRelative(itemView.chat_time, null, null, null, null)
-        }, true)
+        setStatusIcon(isMe, messageItem.status, messageItem.isSignal(), true) { statusIcon, secretIcon ->
+            statusIcon?.setBounds(0, 0, dp12, dp12)
+            secretIcon?.setBounds(0, 0, dp8, dp8)
+            TextViewCompat.setCompoundDrawablesRelative(itemView.chat_time, secretIcon, null, statusIcon, null)
+        }
 
         dataWidth = messageItem.mediaWidth
         dataHeight = messageItem.mediaHeight

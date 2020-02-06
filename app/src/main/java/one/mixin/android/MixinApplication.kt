@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import androidx.camera.camera2.Camera2Config
+import androidx.camera.core.CameraXConfig
 import androidx.work.Configuration
 import com.bugsnag.android.Bugsnag
 import com.crashlytics.android.Crashlytics
@@ -17,12 +19,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import one.mixin.android.crypto.MixinSignalProtocolLogger
 import one.mixin.android.crypto.db.SignalDatabase
-import one.mixin.android.db.MixinDatabase
 import one.mixin.android.di.AppComponent
 import one.mixin.android.di.AppInjector
 import one.mixin.android.extension.clear
 import one.mixin.android.extension.defaultSharedPreferences
 import one.mixin.android.extension.putBoolean
+import one.mixin.android.extension.putString
 import one.mixin.android.job.BlazeMessageService
 import one.mixin.android.job.MixinJobManager
 import one.mixin.android.ui.landing.InitializeActivity
@@ -35,8 +37,7 @@ import org.jetbrains.anko.uiThread
 import org.whispersystems.libsignal.logging.SignalProtocolLoggerProvider
 import timber.log.Timber
 
-class MixinApplication : Application(), HasAndroidInjector, Configuration.Provider {
-
+class MixinApplication : Application(), HasAndroidInjector, Configuration.Provider, CameraXConfig.Provider {
     @Inject
     lateinit var dispatchingAndroidInjector: DispatchingAndroidInjector<Any>
 
@@ -83,6 +84,8 @@ class MixinApplication : Application(), HasAndroidInjector, Configuration.Provid
 
     override fun getWorkManagerConfiguration() = workConfiguration
 
+    override fun getCameraXConfig() = Camera2Config.defaultConfig()
+
     var onlining = AtomicBoolean(false)
 
     fun gotoTimeWrong(serverTime: Long) {
@@ -97,38 +100,32 @@ class MixinApplication : Application(), HasAndroidInjector, Configuration.Provid
         }
     }
 
-    fun closeAndClear(toLanding: Boolean = true) {
+    fun closeAndClear() {
         if (onlining.compareAndSet(true, false)) {
+            val accountId = Session.getAccountId()
             BlazeMessageService.stopService(this)
             CallService.disconnect(this)
             notificationManager.cancelAll()
             Session.clearAccount()
             defaultSharedPreferences.clear()
-            defaultSharedPreferences.putBoolean(Constants.Account.PREF_LOGOUT_COMPLETE, false)
             CookieManager.getInstance().removeAllCookies(null)
             CookieManager.getInstance().flush()
             WebStorage.getInstance().deleteAllData()
-            if (toLanding) {
-                doAsync {
-                    clearData()
-
-                    uiThread {
-                        inject()
-                        LandingActivity.show(this@MixinApplication)
-                    }
-                }
-            } else {
+            doAsync {
                 clearData()
-                inject()
+
+                uiThread {
+                    inject()
+                    defaultSharedPreferences.putString(Constants.Account.PREF_LAST_USER_ID, accountId)
+                    LandingActivity.show(this@MixinApplication)
+                }
             }
         }
     }
 
-    fun clearData() {
+    private fun clearData() {
         jobManager.cancelAllJob()
         jobManager.clear()
         SignalDatabase.getDatabase(this).clearAllTables()
-        MixinDatabase.getDatabase(this).clearAllTables()
-        defaultSharedPreferences.putBoolean(Constants.Account.PREF_LOGOUT_COMPLETE, true)
     }
 }

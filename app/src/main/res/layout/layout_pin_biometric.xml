@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -41,8 +42,8 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center">
+        android:layout_height="120dp"
+        android:layout_gravity="center_horizontal">
 
         <ProgressBar
             style="?android:attr/progressBarStyleSmall"
@@ -55,8 +56,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/margin20"
-        android:layout_marginBottom="@dimen/margin20"
+        android:layout_gravity="center_vertical"
         android:orientation="vertical">
 
         <TextView
@@ -64,6 +64,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_marginTop="@dimen/margin20"
+            android:layout_marginBottom="32dp"
             android:layout_marginStart="@dimen/margin20"
             android:layout_marginEnd="@dimen/margin20"
             android:background="@drawable/bg_round_8_solid_gray"
@@ -80,9 +82,34 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="20dp"
+            android:layout_marginBottom="32dp"
+            android:paddingStart="@dimen/margin20"
+            android:paddingEnd="@dimen/margin20"
             android:enabled="true"
             android:text="@string/common_continue"
             android:textSize="14sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical"
+        tools:ignore="UseCompoundDrawables">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_transfer_done"
+            android:layout_gravity="center_horizontal"
+            android:contentDescription="@null"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin12"
+            android:layout_gravity="center_horizontal"
+            android:textColor="@color/textRemarks"
+            android:text="@string/done"/>
     </LinearLayout>
 </merge>

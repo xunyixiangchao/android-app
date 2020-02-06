@@ -4,19 +4,23 @@ import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import androidx.core.view.isVisible
 import kotlinx.android.synthetic.main.date_wrapper.view.*
 import kotlinx.android.synthetic.main.item_chat_bill.view.*
 import one.mixin.android.R
 import one.mixin.android.extension.loadImage
 import one.mixin.android.extension.numberFormat8
+import one.mixin.android.extension.realSize
 import one.mixin.android.extension.timeAgoClock
 import one.mixin.android.ui.conversation.adapter.ConversationAdapter
 import one.mixin.android.vo.MessageItem
+import one.mixin.android.vo.isSignal
 
 class BillHolder constructor(containerView: View) : BaseViewHolder(containerView) {
 
     init {
         itemView.chat_flag.visibility = View.GONE
+        itemView.chat_layout.layoutParams.width = (itemView.context.realSize().x * 0.6).toInt()
     }
 
     private var onItemListener: ConversationAdapter.OnItemListener? = null
@@ -35,7 +39,7 @@ class BillHolder constructor(containerView: View) : BaseViewHolder(containerView
         itemView.bill_iv.loadImage(messageItem.assetIcon, R.drawable.ic_avatar_place_holder)
         itemView.bill_tv.text = messageItem.snapshotAmount?.numberFormat8()
         itemView.bill_symbol_tv.text = messageItem.assetSymbol
-
+        itemView.chat_secret.isVisible = messageItem.isSignal()
         itemView.setOnLongClickListener {
             if (!hasSelect) {
                 onItemListener.onLongClick(messageItem, adapterPosition)
@@ -81,7 +85,7 @@ class BillHolder constructor(containerView: View) : BaseViewHolder(containerView
                     R.drawable.bill_bubble_me_last_night
                 )
             } else {
-                 setItemBackgroundResource(
+                setItemBackgroundResource(
                     itemView.chat_layout,
                     R.drawable.bill_bubble_me,
                     R.drawable.bill_bubble_me_night
@@ -91,13 +95,13 @@ class BillHolder constructor(containerView: View) : BaseViewHolder(containerView
         } else {
             (itemView.chat_layout.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.START
             if (isLast) {
-            setItemBackgroundResource(
+                setItemBackgroundResource(
                     itemView.chat_layout,
                     R.drawable.chat_bubble_other_last,
                     R.drawable.chat_bubble_other_last_night
                 )
             } else {
-             setItemBackgroundResource(
+                setItemBackgroundResource(
                     itemView.chat_layout,
                     R.drawable.chat_bubble_other,
                     R.drawable.chat_bubble_other_night

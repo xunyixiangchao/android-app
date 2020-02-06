@@ -7,6 +7,7 @@ import one.mixin.android.ui.common.AppListBottomSheetDialogFragment
 import one.mixin.android.ui.common.EditDialog
 import one.mixin.android.ui.common.GroupBottomSheetDialogFragment
 import one.mixin.android.ui.common.MultisigsBottomSheetDialogFragment
+import one.mixin.android.ui.common.QrBottomSheetDialogFragment
 import one.mixin.android.ui.common.QrScanBottomSheetDialogFragment
 import one.mixin.android.ui.common.UserBottomSheetDialogFragment
 import one.mixin.android.ui.common.UserListBottomSheetDialogFragment
@@ -15,7 +16,6 @@ import one.mixin.android.ui.common.profile.MySharedAppsFragment
 import one.mixin.android.ui.common.profile.ProfileBottomSheetDialogFragment
 import one.mixin.android.ui.conversation.GiphyBottomSheetFragment
 import one.mixin.android.ui.conversation.TransferFragment
-import one.mixin.android.ui.conversation.TransferTipBottomSheetDialogFragment
 import one.mixin.android.ui.conversation.UserTransactionsFragment
 import one.mixin.android.ui.conversation.WithdrawalTipBottomSheetDialogFragment
 import one.mixin.android.ui.conversation.link.LinkBottomSheetDialogFragment
@@ -67,9 +67,6 @@ abstract class CommonModule {
     internal abstract fun contributeWithdrawalTipBottomSheetFragment(): WithdrawalTipBottomSheetDialogFragment
 
     @ContributesAndroidInjector
-    internal abstract fun contributeTransferTipBottomSheetDialogFragment(): TransferTipBottomSheetDialogFragment
-
-    @ContributesAndroidInjector
     internal abstract fun contributeWalletPasswordFragment(): WalletPasswordFragment
 
     @ContributesAndroidInjector
@@ -104,4 +101,7 @@ abstract class CommonModule {
 
     @ContributesAndroidInjector
     internal abstract fun contributeAppListBottomSheetDialogFragment(): AppListBottomSheetDialogFragment
+
+    @ContributesAndroidInjector
+    internal abstract fun contributeQrBottomSheetDialogFragment(): QrBottomSheetDialogFragment
 }

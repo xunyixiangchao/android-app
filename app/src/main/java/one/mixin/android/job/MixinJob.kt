@@ -112,7 +112,7 @@ abstract class MixinJob(params: Params, val jobId: String) : BaseJob(params) {
                         keys.add(BlazeMessageParamSession(key.userId, key.sessionId))
                     }
                 } else {
-                    Log.e(TAG, "No any group signal key from server")
+                    Log.e(TAG, "No any group signal key from server: " + requestSignalKeyUsers.toString())
                 }
 
                 val noKeyList = requestSignalKeyUsers.filter { !keys.contains(it) }
@@ -371,7 +371,7 @@ abstract class MixinJob(params: Params, val jobId: String) : BaseJob(params) {
                 .setAnnouncement(data.announcement)
                 .setCodeUrl(data.codeUrl).build()
             conversationDao.insert(c)
-            if (c.announcement.isNullOrBlank()) {
+            if (!c.announcement.isNullOrBlank()) {
                 RxBus.publish(GroupEvent(data.conversationId))
                 applicationContext.sharedPreferences(RefreshConversationJob.PREFERENCES_CONVERSATION).putBoolean(data.conversationId, true)
             }
@@ -383,7 +383,7 @@ abstract class MixinJob(params: Params, val jobId: String) : BaseJob(params) {
             }
             conversationDao.updateConversation(data.conversationId, ownerId, data.category, data.name,
                 data.announcement, data.muteUntil, data.createdAt, status)
-            if (!data.announcement.isNullOrBlank() && c.announcement != data.announcement) {
+            if (!data.announcement.isBlank() && c.announcement != data.announcement) {
                 RxBus.publish(GroupEvent(data.conversationId))
                 applicationContext.sharedPreferences(RefreshConversationJob.PREFERENCES_CONVERSATION).putBoolean(data.conversationId, true)
             }

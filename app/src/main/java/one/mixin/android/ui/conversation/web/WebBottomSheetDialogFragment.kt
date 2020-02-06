@@ -27,6 +27,8 @@ import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
+import android.webkit.WebSettings.FORCE_DARK_AUTO
+import android.webkit.WebSettings.FORCE_DARK_ON
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -58,6 +60,7 @@ import one.mixin.android.Constants.Mixin_Conversation_ID_HEADER
 import one.mixin.android.MixinApplication
 import one.mixin.android.R
 import one.mixin.android.extension.REQUEST_CAMERA
+import one.mixin.android.extension.colorFromAttribute
 import one.mixin.android.extension.copyFromInputStream
 import one.mixin.android.extension.createImageTemp
 import one.mixin.android.extension.defaultSharedPreferences
@@ -71,6 +74,7 @@ import one.mixin.android.extension.openCamera
 import one.mixin.android.extension.openPermissionSetting
 import one.mixin.android.extension.openUrl
 import one.mixin.android.extension.statusBarHeight
+import one.mixin.android.extension.supportsQ
 import one.mixin.android.extension.toast
 import one.mixin.android.extension.withArgs
 import one.mixin.android.ui.common.MixinBottomSheetDialogFragment
@@ -277,6 +281,13 @@ class WebBottomSheetDialogFragment : MixinBottomSheetDialogFragment() {
         contentView.chat_web_view.settings.domStorageEnabled = true
         contentView.chat_web_view.settings.useWideViewPort = true
         contentView.chat_web_view.settings.loadWithOverviewMode = true
+        supportsQ {
+            contentView.chat_web_view.settings.forceDark = if (isNightMode()) {
+                FORCE_DARK_ON
+            } else {
+                FORCE_DARK_AUTO
+            }
+        }
         contentView.chat_web_view.settings.mixedContentMode =
             WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         contentView.chat_web_view.settings.mediaPlaybackRequiresUserGesture = false
@@ -429,6 +440,17 @@ class WebBottomSheetDialogFragment : MixinBottomSheetDialogFragment() {
             extraHeaders[Mixin_Conversation_ID_HEADER] = it
         }
         contentView.chat_web_view.loadUrl(url, extraHeaders)
+    }
+
+    private fun isNightMode(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            requireContext().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        } else {
+            requireContext().defaultSharedPreferences.getInt(
+                Constants.Theme.THEME_CURRENT_ID,
+                Constants.Theme.THEME_DEFAULT_ID
+            ) == Constants.Theme.THEME_NIGHT_ID
+        }
     }
 
     @Override
@@ -613,7 +635,7 @@ class WebBottomSheetDialogFragment : MixinBottomSheetDialogFragment() {
             val dark = ColorUtils.calculateLuminance(c) < 0.5
             refreshByLuminance(dark, c)
         } catch (e: Exception) {
-            refreshByLuminance(false, Color.WHITE)
+            refreshByLuminance(isNightMode(), requireContext().colorFromAttribute(R.attr.icon_white))
         }
     }
 

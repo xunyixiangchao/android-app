@@ -2,7 +2,6 @@ package one.mixin.android.di
 
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
-import one.mixin.android.di.module.AddressActivityModule
 import one.mixin.android.di.module.CaptureActivityModule
 import one.mixin.android.di.module.CommonModule
 import one.mixin.android.di.module.ContactActivityModule
@@ -17,7 +16,6 @@ import one.mixin.android.di.module.SettingActivityModule
 import one.mixin.android.di.module.SharedMediaActivityModule
 import one.mixin.android.di.module.UrlInterpreterActivityModule
 import one.mixin.android.di.module.WalletActivityModule
-import one.mixin.android.ui.address.AddressActivity
 import one.mixin.android.ui.call.CallActivity
 import one.mixin.android.ui.contacts.ContactsActivity
 import one.mixin.android.ui.conversation.ConversationActivity
@@ -29,8 +27,8 @@ import one.mixin.android.ui.home.MainActivity
 import one.mixin.android.ui.landing.InitializeActivity
 import one.mixin.android.ui.landing.LandingActivity
 import one.mixin.android.ui.landing.RestoreActivity
-import one.mixin.android.ui.media.DragMediaActivity
 import one.mixin.android.ui.media.SharedMediaActivity
+import one.mixin.android.ui.media.pager.MediaPagerActivity
 import one.mixin.android.ui.qr.CaptureActivity
 import one.mixin.android.ui.setting.SettingActivity
 import one.mixin.android.ui.sticker.StickerActivity
@@ -78,21 +76,18 @@ abstract class ActivityModule {
     @ContributesAndroidInjector(modules = [(CommonModule::class), (ConversationActivityModule::class)])
     internal abstract fun contributeSticker(): StickerActivity
 
-    @ContributesAndroidInjector(modules = [(CommonModule::class), (AddressActivityModule::class)])
-    internal abstract fun contributeAddress(): AddressActivity
-
     @ContributesAndroidInjector
     internal abstract fun contributeCall(): CallActivity
 
     @ContributesAndroidInjector
     internal abstract fun contributeRestore(): RestoreActivity
 
-    @ContributesAndroidInjector
-    internal abstract fun contributeRecycler(): MarkdownActivity
+    @ContributesAndroidInjector(modules = [(CommonModule::class)])
+    internal abstract fun contributeMarkdown(): MarkdownActivity
 
     @ContributesAndroidInjector(modules = [(CommonModule::class), (SharedMediaActivityModule::class)])
     internal abstract fun contributeSharedMedia(): SharedMediaActivity
 
     @ContributesAndroidInjector(modules = [(CommonModule::class), (SharedMediaActivityModule::class)])
-    internal abstract fun contributeDragMedia(): DragMediaActivity
+    internal abstract fun contributeMediaPager(): MediaPagerActivity
 }

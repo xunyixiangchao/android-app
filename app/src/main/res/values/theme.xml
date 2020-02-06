@@ -10,6 +10,7 @@
     <attr name="text_minor" format="color|reference" />
     <attr name="text_assist" format="color|reference" />
     <attr name="text_remarks" format="color|reference" />
+    <attr name="text_subtitle" format="color|reference" />
     <attr name="text_blue" format="color|reference" />
 
     <attr name="text_default" format="color|reference" />
@@ -35,6 +36,11 @@
     <attr name="bg_gray_light" format="color|reference" />
     <attr name="bg_confirmation" format="color|reference" />
     <attr name="bg_block" format="color|reference" />
+    <attr name="bg_post" format="color|reference" />
+    <attr name="bg_bubble" format="color|reference" />
 
     <attr name="flag_night" format="boolean|reference" />
+
+    <attr name="icon_emergency" format="reference"/>
+    <attr name="icon_emergency_contact" format="reference"/>
 </resources>

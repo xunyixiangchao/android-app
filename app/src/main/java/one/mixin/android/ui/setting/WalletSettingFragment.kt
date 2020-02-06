@@ -1,6 +1,7 @@
 package one.mixin.android.ui.setting
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -8,6 +9,8 @@ import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.android.synthetic.main.fragment_wallet_setting.*
 import kotlinx.android.synthetic.main.view_title.view.*
@@ -65,24 +68,18 @@ class WalletSettingFragment : BaseViewModelFragment<SettingViewModel>() {
         pin_log_tv.setOnClickListener {
             navTo(PinLogsFragment.newInstance(), PinLogsFragment.TAG)
         }
-        val isBiometricsSupport = BiometricUtil.isSupport(requireContext())
-        if (isBiometricsSupport) {
-            time_rl.setOnClickListener {
-                navTo(BiometricTimeFragment.newInstance(), BiometricTimeFragment.TAG)
-            }
-            biometrics_sc.isClickable = false
-            biometrics_rl.setOnClickListener(biometricsClickListener)
-            val open = defaultSharedPreferences.getBoolean(Constants.Account.PREF_BIOMETRICS, false)
-            if (open) {
-                biometrics_sc.isChecked = true
-                time_rl.visibility = VISIBLE
-                setTimeDesc()
-            } else {
-                biometrics_sc.isChecked = false
-                time_rl.visibility = GONE
-            }
+        time_rl.setOnClickListener {
+            navTo(BiometricTimeFragment.newInstance(), BiometricTimeFragment.TAG)
+        }
+        biometrics_sc.isClickable = false
+        biometrics_rl.setOnClickListener(biometricsClickListener)
+        val open = defaultSharedPreferences.getBoolean(Constants.Account.PREF_BIOMETRICS, false)
+        if (open) {
+            biometrics_sc.isChecked = true
+            time_rl.visibility = VISIBLE
+            setTimeDesc()
         } else {
-            biometrics_rl.visibility = GONE
+            biometrics_sc.isChecked = false
             time_rl.visibility = GONE
         }
         large_amount_rl.setOnClickListener {
@@ -98,6 +95,13 @@ class WalletSettingFragment : BaseViewModelFragment<SettingViewModel>() {
             }
         }
         refreshLargeAmount(Session.getAccount()!!.transferConfirmationThreshold)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == BiometricUtil.REQUEST_CODE_CREDENTIALS && resultCode == AppCompatActivity.RESULT_OK) {
+            updateWhenSuccess()
+        }
     }
 
     private fun savePreference(threshold: Double) = lifecycleScope.launch {
@@ -142,26 +146,46 @@ class WalletSettingFragment : BaseViewModelFragment<SettingViewModel>() {
     }
 
     private val biometricsClickListener = View.OnClickListener {
+        val isSupportWithErrorInfo = BiometricUtil.isSupportWithErrorInfo(requireContext())
+        val isSupport = isSupportWithErrorInfo.first
+        if (!isSupport) {
+            isSupportWithErrorInfo.second?.let {
+                biometric_error_tv.text = it
+                biometric_error_tv.isVisible = true
+            }
+            resetBiometricLayout()
+            return@OnClickListener
+        } else {
+            biometric_error_tv.isVisible = false
+        }
         if (biometrics_sc.isChecked) {
-            biometrics_sc.isChecked = false
-            time_rl.visibility = GONE
-            BiometricUtil.deleteKey(requireContext())
+            resetBiometricLayout()
         } else {
             val bottomSheet =
                 PinBiometricsBottomSheetDialogFragment.newInstance(true)
             bottomSheet.callback = object : BiometricBottomSheetDialogFragment.Callback {
                 override fun onSuccess() {
-                    biometrics_sc.isChecked = true
-                    time_rl.visibility = VISIBLE
-                    setTimeDesc()
-                    defaultSharedPreferences.putLong(Constants.BIOMETRIC_PIN_CHECK, System.currentTimeMillis())
-                    defaultSharedPreferences.putBoolean(Constants.Account.PREF_BIOMETRICS, true)
+                    updateWhenSuccess()
                 }
             }
             bottomSheet.showNow(parentFragmentManager,
                 PinBiometricsBottomSheetDialogFragment.TAG
             )
         }
+    }
+
+    private fun updateWhenSuccess() {
+        biometrics_sc.isChecked = true
+        time_rl.visibility = VISIBLE
+        setTimeDesc()
+        defaultSharedPreferences.putLong(Constants.BIOMETRIC_PIN_CHECK, System.currentTimeMillis())
+        defaultSharedPreferences.putBoolean(Constants.Account.PREF_BIOMETRICS, true)
+    }
+
+    private fun resetBiometricLayout() {
+        biometrics_sc.isChecked = false
+        time_rl.visibility = GONE
+        BiometricUtil.deleteKey(requireContext())
     }
 
     @SuppressLint("SetTextI18n")

@@ -1,8 +1,11 @@
 package one.mixin.android.ui.common
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ClipData
+import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
@@ -17,12 +20,12 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.jakewharton.rxbinding3.view.clicks
+import com.tbruyelle.rxpermissions2.RxPermissions
 import com.uber.autodispose.autoDispose
 import io.reactivex.android.schedulers.AndroidSchedulers
 import java.util.concurrent.TimeUnit
-import kotlinx.android.synthetic.main.fragment_user_bottom_sheet.*
+import javax.inject.Inject
 import kotlinx.android.synthetic.main.fragment_user_bottom_sheet.view.*
-import kotlinx.android.synthetic.main.fragment_user_bottom_sheet.view.transfer_fl
 import kotlinx.android.synthetic.main.view_round_title.view.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,8 +42,10 @@ import one.mixin.android.extension.dpToPx
 import one.mixin.android.extension.getClipboardManager
 import one.mixin.android.extension.localTime
 import one.mixin.android.extension.notNullWithElse
+import one.mixin.android.extension.openPermissionSetting
 import one.mixin.android.extension.showConfirmDialog
 import one.mixin.android.extension.toast
+import one.mixin.android.ui.call.CallActivity
 import one.mixin.android.ui.common.info.MenuStyle
 import one.mixin.android.ui.common.info.MixinScrollableBottomSheetDialogFragment
 import one.mixin.android.ui.common.info.createMenuLayout
@@ -58,14 +63,17 @@ import one.mixin.android.ui.media.SharedMediaActivity
 import one.mixin.android.ui.search.SearchMessageFragment
 import one.mixin.android.ui.url.openUrlWithExtraWeb
 import one.mixin.android.util.Session
+import one.mixin.android.vo.CallState
 import one.mixin.android.vo.ConversationCategory
 import one.mixin.android.vo.ForwardCategory
 import one.mixin.android.vo.ForwardMessage
+import one.mixin.android.vo.LinkState
 import one.mixin.android.vo.SearchMessageItem
 import one.mixin.android.vo.User
 import one.mixin.android.vo.UserRelationship
 import one.mixin.android.vo.generateConversationId
 import one.mixin.android.vo.showVerifiedOrBot
+import one.mixin.android.webrtc.CallService
 import one.mixin.android.widget.linktext.AutoLinkMode
 import org.threeten.bp.Instant
 
@@ -79,7 +87,10 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
         const val MUTE_1_YEAR = 365 * 24 * 60 * 60
         private var instant: UserBottomSheetDialogFragment? = null
         fun newInstance(user: User, conversationId: String? = null): UserBottomSheetDialogFragment {
-            instant?.dismiss()
+            try {
+                instant?.dismiss()
+            } catch (ignored: IllegalStateException) {
+            }
             instant = null
             return UserBottomSheetDialogFragment().apply {
                 arguments = Bundle().apply {
@@ -101,6 +112,11 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
     // bot need conversation id
     private var conversationId: String? = null
     private var creator: User? = null
+
+    @Inject
+    lateinit var linkState: LinkState
+    @Inject
+    lateinit var callState: CallState
 
     private var menuListLayout: ViewGroup? = null
 
@@ -258,6 +274,28 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
             title = getString(R.string.edit_name)
             action = { showDialog(u.fullName) }
         }
+        val voiceCallMenu = menu {
+            title = getString(R.string.voice_call)
+            action = {
+                startVoiceCall()
+            }
+        }
+        val phoneNum = user.phone
+        val telephoneCallMenu = if (!phoneNum.isNullOrEmpty()) {
+            val phoneUri = Uri.parse("tel:$phoneNum")
+            menu {
+                title = getString(R.string.phone_call)
+                subtitle = phoneNum
+                action = {
+                    requireContext().showConfirmDialog(getString(R.string.call_who, phoneNum)) {
+                        Intent(Intent.ACTION_DIAL).run {
+                            this.data = phoneUri
+                            startActivity(this)
+                        }
+                    }
+                }
+            }
+        } else null
         val developerMenu = menu {
             title = getString(R.string.developer)
             action = {
@@ -314,11 +352,48 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
                 }
             }
         }
+
+        if (u.relationship == UserRelationship.FRIEND.name) {
+            list.groups.add(menuGroup {
+                menu(muteMenu)
+                menu(editNameMenu)
+            })
+        } else {
+            list.groups.add(menuGroup {
+                menu(muteMenu)
+            })
+        }
+
+        if (u.isBot()) {
+            if (telephoneCallMenu != null) {
+                list.groups.add(menuGroup {
+                    menu(telephoneCallMenu)
+                })
+            }
+        } else {
+            list.groups.add(menuGroup {
+                menu(voiceCallMenu)
+                telephoneCallMenu?.let { menu(it) }
+            })
+        }
+
+        if (u.isBot()) {
+            list.groups.add(menuGroup {
+                menu(developerMenu)
+                menu(transactionMenu)
+            })
+        } else {
+            list.groups.add(menuGroup {
+                menu(transactionMenu)
+            })
+        }
+
         when (u.relationship) {
             UserRelationship.BLOCKING.name -> {
                 list.groups.add(menuGroup {
                     menu {
                         title = getString(R.string.contact_other_unblock)
+                        style = MenuStyle.Danger
                         action = {
                             bottomViewModel.updateRelationship(
                                 RelationshipRequest(
@@ -333,21 +408,6 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
             }
             UserRelationship.FRIEND.name -> {
                 list.groups.add(menuGroup {
-                    menu(muteMenu)
-                    menu(editNameMenu)
-                })
-                val developerTransactionList = if (u.isBot()) {
-                    menuGroup {
-                        menu(developerMenu)
-                        menu(transactionMenu)
-                    }
-                } else {
-                    menuGroup {
-                        menu(transactionMenu)
-                    }
-                }
-                list.groups.add(developerTransactionList)
-                list.groups.add(menuGroup {
                     menu {
                         title = getString(R.string.contact_other_remove)
                         style = MenuStyle.Danger
@@ -361,10 +421,6 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
                 })
             }
             UserRelationship.STRANGER.name -> {
-                list.groups.add(menuGroup {
-                    menu(muteMenu)
-                    menu(transactionMenu)
-                })
                 list.groups.add(menuGroup {
                     menu {
                         title = getString(R.string.contact_other_block)
@@ -440,6 +496,45 @@ class UserBottomSheetDialogFragment : MixinScrollableBottomSheetDialogFragment()
                 SearchMessageFragment.newInstance(searchMessageItem, ""),
                 SearchMessageFragment.TAG
             )
+        }
+    }
+
+    @SuppressLint("CheckResult")
+    private fun startVoiceCall() {
+        if (!callState.isIdle()) {
+            if (callState.user?.userId == user.userId) {
+                CallActivity.show(requireContext(), user)
+            } else {
+                AlertDialog.Builder(requireContext(), R.style.MixinAlertDialogTheme)
+                    .setMessage(getString(R.string.chat_call_warning_call))
+                    .setNegativeButton(getString(android.R.string.ok)) { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+        } else {
+            RxPermissions(requireActivity())
+                .request(Manifest.permission.RECORD_AUDIO)
+                .subscribe({ granted ->
+                    if (granted) {
+                        callVoice()
+                    } else {
+                        context?.openPermissionSetting()
+                    }
+                }, {
+                })
+        }
+    }
+
+    private fun callVoice() {
+        if (LinkState.isOnline(linkState.state)) {
+            CallService.outgoing(requireContext(), user, generateConversationId(
+                Session.getAccountId()!!,
+                user.userId
+            ))
+            dismiss()
+        } else {
+            toast(R.string.error_no_connection)
         }
     }
 

@@ -6,9 +6,10 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
+import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
-import com.bugsnag.android.Bugsnag
+import com.crashlytics.android.Crashlytics
 import java.nio.charset.Charset
 import java.security.InvalidKeyException
 import java.security.KeyStore
@@ -26,16 +27,32 @@ import one.mixin.android.extension.defaultSharedPreferences
 import one.mixin.android.extension.putString
 import one.mixin.android.extension.remove
 import one.mixin.android.extension.toast
-import one.mixin.android.ui.common.biometric.BiometricException
 import org.jetbrains.anko.getStackTraceString
-import timber.log.Timber
 
 object BiometricUtil {
 
     const val REQUEST_CODE_CREDENTIALS = 101
 
-    fun isSupport(ctx: Context): Boolean {
-        return isKeyguardSecure(ctx) && isSecureHardware() && BiometricPromptCompat.isHardwareDetected(ctx) && !RootUtil.isDeviceRooted
+    const val CRASHLYTICS_BIOMETRIC = "biometric"
+
+    private fun isSupport(ctx: Context): Boolean {
+        return BiometricPromptCompat.isHardwareDetected(ctx) && isKeyguardSecure(ctx) && isSecureHardware() && !RootUtil.isDeviceRooted
+    }
+
+    fun isSupportWithErrorInfo(ctx: Context): Pair<Boolean, String?> {
+        if (!BiometricPromptCompat.isHardwareDetected(ctx)) {
+            return Pair(false, "Low device software version")
+        }
+        if (!isKeyguardSecure(ctx)) {
+            return Pair(false, "The PIN, pattern or password is NOT set or a SIM card is unlocked")
+        }
+        if (!isSecureHardware()) {
+            return Pair(false, "The key NOT resides inside secure hardware (TEE)")
+        }
+        if (RootUtil.isDeviceRooted) {
+            return Pair(false, "The device has been rooted")
+        }
+        return Pair(true, null)
     }
 
     fun showAuthenticationScreen(fragment: Fragment) {
@@ -43,7 +60,7 @@ object BiometricUtil {
             fragment.requireContext().getString(R.string.wallet_biometric_screen_lock),
             fragment.requireContext().getString(R.string.wallet_biometric_screen_lock_desc))
         if (intent != null) {
-            fragment.startActivityForResult(intent, REQUEST_CODE_CREDENTIALS)
+            fragment.activity?.startActivityForResult(intent, REQUEST_CODE_CREDENTIALS)
         }
     }
 
@@ -57,7 +74,7 @@ object BiometricUtil {
                     deleteKey(ctx)
                     ctx.toast(R.string.wallet_biometric_invalid)
                 }
-                else -> Bugsnag.notify(BiometricException("getEncryptCipher. ${e.getStackTraceString()}"))
+                else -> Crashlytics.log(Log.ERROR, CRASHLYTICS_BIOMETRIC, "getEncryptCipher. ${e.getStackTraceString()}")
             }
             return false
         }
@@ -70,19 +87,22 @@ object BiometricUtil {
     }
 
     fun deleteKey(ctx: Context) {
-        val ks: KeyStore = KeyStore.getInstance("AndroidKeyStore").apply {
-            load(null)
-        }
         try {
+            val ks: KeyStore = KeyStore.getInstance("AndroidKeyStore").apply {
+                load(null)
+            }
             ks.deleteEntry(BIOMETRICS_ALIAS)
         } catch (e: Exception) {
-            Bugsnag.notify(BiometricException("delete entry BIOMETRICS_ALIAS failed. ${e.getStackTraceString()}"))
-            Timber.d("delete entry BIOMETRICS_ALIAS failed.")
+            Crashlytics.log(Log.ERROR, CRASHLYTICS_BIOMETRIC, "delete entry BIOMETRICS_ALIAS failed. ${e.getStackTraceString()}")
         }
 
-        ctx.defaultSharedPreferences.remove(Constants.BIOMETRICS_IV)
-        ctx.defaultSharedPreferences.remove(Constants.BIOMETRICS_ALIAS)
-        ctx.defaultSharedPreferences.remove(Constants.Account.PREF_BIOMETRICS)
+        ctx.defaultSharedPreferences.apply {
+            remove(Constants.BIOMETRICS_IV)
+            remove(Constants.Account.PREF_BIOMETRICS)
+            remove(Constants.BIOMETRICS_PIN)
+            remove(Constants.BIOMETRIC_PIN_CHECK)
+            remove(Constants.BIOMETRIC_INTERVAL)
+        }
     }
 
     fun shouldShowBiometric(ctx: Context): Boolean {
@@ -112,8 +132,7 @@ object BiometricUtil {
         try {
             key = ks.getKey(BIOMETRICS_ALIAS, null) as? SecretKey
         } catch (e: Exception) {
-            Bugsnag.notify(BiometricException("getKey BIOMETRICS_ALIAS failed. ${e.getStackTraceString()}"))
-            Timber.d("getKey BIOMETRICS_ALIAS failed.")
+            Crashlytics.log(Log.ERROR, CRASHLYTICS_BIOMETRIC, "getKey BIOMETRICS_ALIAS failed. ${e.getStackTraceString()}")
         }
         try {
             if (key == null) {
@@ -135,8 +154,7 @@ object BiometricUtil {
                 key = keyGenerator.generateKey()
             }
         } catch (e: Exception) {
-            Bugsnag.notify(BiometricException("keyGenerator init failed. ${e.getStackTraceString()}"))
-            Timber.d("keyGenerator init failed.")
+            Crashlytics.log(Log.ERROR, CRASHLYTICS_BIOMETRIC, "keyGenerator init failed. ${e.getStackTraceString()}")
         }
         return key
     }

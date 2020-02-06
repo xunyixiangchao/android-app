@@ -50,6 +50,7 @@ import one.mixin.android.db.OffsetDao
 import one.mixin.android.di.type.DatabaseCategory
 import one.mixin.android.di.type.DatabaseCategoryEnum
 import one.mixin.android.di.worker.MixinWorkerFactory
+import one.mixin.android.extension.filterNonAscii
 import one.mixin.android.extension.networkConnected
 import one.mixin.android.job.BaseJob
 import one.mixin.android.job.JobLogger
@@ -69,8 +70,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 internal class AppModule {
 
     private val LOCALE = Locale.getDefault().language + "-" + Locale.getDefault().country
-    private val API_UA = "Mixin/" + BuildConfig.VERSION_NAME +
-        " (Android " + android.os.Build.VERSION.RELEASE + "; " + android.os.Build.FINGERPRINT + "; " + LOCALE + ")"
+    private val API_UA = ("Mixin/" + BuildConfig.VERSION_NAME +
+        " (Android " + android.os.Build.VERSION.RELEASE + "; " + android.os.Build.FINGERPRINT + "; " + LOCALE + ")").filterNonAscii()
 
     private fun getDeviceId(resolver: ContentResolver): String {
         var deviceId = Settings.Secure.getString(resolver, Settings.Secure.ANDROID_ID)

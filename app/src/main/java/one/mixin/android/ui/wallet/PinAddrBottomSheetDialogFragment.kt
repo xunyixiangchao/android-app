@@ -14,8 +14,6 @@ import kotlinx.coroutines.launch
 import one.mixin.android.R
 import one.mixin.android.api.MixinResponse
 import one.mixin.android.extension.loadImage
-import one.mixin.android.extension.notNullWithElse
-import one.mixin.android.extension.toast
 import one.mixin.android.ui.common.biometric.BiometricBottomSheetDialogFragment
 import one.mixin.android.ui.common.biometric.BiometricInfo
 import one.mixin.android.vo.Address
@@ -112,7 +110,7 @@ class PinAddrBottomSheetDialogFragment : BiometricBottomSheetDialogFragment() {
         }
     }
 
-    override fun doWhenInvokeNetworkSuccess(response: MixinResponse<*>, pin: String) {
+    override fun doWhenInvokeNetworkSuccess(response: MixinResponse<*>, pin: String): Boolean {
         lifecycleScope.launch {
             if (type == ADD || type == MODIFY) {
                 bottomViewModel.saveAddr(response.data as Address)
@@ -120,11 +118,8 @@ class PinAddrBottomSheetDialogFragment : BiometricBottomSheetDialogFragment() {
                 bottomViewModel.deleteLocalAddr(addressId!!)
             }
             contentView.biometric_layout.showPin(false)
-            callback.notNullWithElse({ action -> action.onSuccess() }, {
-                toast(R.string.successful)
-            })
-            dismiss()
         }
+        return true
     }
 
     private fun getTitle() = getString(when (type) {

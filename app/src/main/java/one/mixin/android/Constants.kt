@@ -27,7 +27,7 @@ object Constants {
         const val PREF_PIN_INTERVAL = "pref_pin_interval"
         const val PREF_PIN_ITERATOR = "pref_pin_iterator"
         const val PREF_CAMERA_TIP = "pref_camera_tip"
-        const val PREF_LOGOUT_COMPLETE = "pref_logout_complete"
+        const val PREF_LAST_USER_ID = "pref_last_user_id"
         const val PREF_BIOMETRICS = "pref_biometrics"
         const val PREF_WRONG_TIME = "pref_wrong_time"
         const val PREF_FTS_UPGRADE = "pref_fts_upgrade"
@@ -40,6 +40,7 @@ object Constants {
         const val PREF_FIAT_MAP = "pref_fiat_map"
         const val PREF_SET_LANGUAGE = "pref_set_language"
         const val PREF_LANGUAGE = "pref_language"
+        const val PREF_NOTIFICATION_ON = "pref_notification_on"
     }
 
     object Scheme {
@@ -137,4 +138,6 @@ object Constants {
     const val BIOMETRIC_PIN_CHECK = "biometric_pin_check"
 
     const val RECENT_USED_BOTS_MAX_COUNT = 12
+
+    const val PIN_ERROR_MAX = 5
 }

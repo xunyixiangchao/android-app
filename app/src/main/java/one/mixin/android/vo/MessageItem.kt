@@ -9,6 +9,7 @@ import android.os.Parcelable
 import android.view.View
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
+import androidx.paging.PositionalDataSource
 import androidx.recyclerview.widget.DiffUtil
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -25,6 +26,7 @@ import one.mixin.android.extension.hasWritePermission
 import one.mixin.android.extension.isImageSupport
 import one.mixin.android.extension.nowInUtc
 import one.mixin.android.extension.toast
+import one.mixin.android.util.VideoPlayer
 
 @SuppressLint("ParcelCreator")
 @Entity
@@ -99,12 +101,14 @@ data class MessageItem(
     }
 }
 
-fun create(type: String, createdAt: String? = null) = MessageItem("", "", "", "", "",
+fun create(type: String, createdAt: String? = null) = MessageItem(
+    "", "", "", "", "",
     type, null, createdAt
-    ?: nowInUtc(), MessageStatus.READ.name, null, null,
+        ?: nowInUtc(), MessageStatus.READ.name, null, null,
     null, null, null, null, null, null, null, null,
     null, null, null, null, null, null, null, null,
-    null, null, null, null, null, null, null, null, null, null)
+    null, null, null, null, null, null, null, null, null, null
+)
 
 fun MessageItem.isMedia(): Boolean = this.type == MessageCategory.SIGNAL_IMAGE.name ||
     this.type == MessageCategory.PLAIN_IMAGE.name ||
@@ -177,10 +181,14 @@ fun MessageItem.canRecall(): Boolean {
 
 fun MessageItem.isRecall() = type == MessageCategory.MESSAGE_RECALL.name
 
-fun MessageItem.toMessage() = Message(messageId, conversationId, userId, type, content, mediaUrl, mediaMimeType, mediaSize,
+fun MessageItem.isSignal() = type.startsWith("SIGNAL_")
+
+fun MessageItem.toMessage() = Message(
+    messageId, conversationId, userId, type, content, mediaUrl, mediaMimeType, mediaSize,
     mediaDuration, mediaWidth, mediaHeight, null, thumbImage, thumbUrl, null, null, mediaStatus, status,
     createdAt, actionName, participantUserId, snapshotId, hyperlink = null, name = mediaName, albumId = null, stickerId = stickerId,
-    sharedUserId = sharedUserId, mediaWaveform = mediaWaveform, mediaMineType = null, quoteMessageId = quoteId, quoteContent = quoteContent)
+    sharedUserId = sharedUserId, mediaWaveform = mediaWaveform, mediaMineType = null, quoteMessageId = quoteId, quoteContent = quoteContent
+)
 
 fun MessageItem.showVerifiedOrBot(verifiedView: View, botView: View) {
     when {
@@ -223,4 +231,28 @@ fun MessageItem.saveToLocal(context: Context) {
     outFile.copyFromInputStream(FileInputStream(file))
     context.sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(outFile)))
     MixinApplication.appContext.toast(R.string.save_success)
+}
+
+fun MessageItem.loadVideoOrLive(actionAfterLoad: (() -> Unit)? = null) {
+    mediaUrl?.let {
+        if (isLive()) {
+            VideoPlayer.player().loadHlsVideo(it, messageId)
+        } else {
+            VideoPlayer.player().loadVideo(it, messageId)
+        }
+        actionAfterLoad?.invoke()
+    }
+}
+
+class FixedMessageDataSource(private val messageItems: List<MessageItem>) : PositionalDataSource<MessageItem>() {
+    override fun loadRange(params: LoadRangeParams, callback: LoadRangeCallback<MessageItem>) {
+        callback.onResult(messageItems)
+    }
+
+    override fun loadInitial(
+        params: LoadInitialParams,
+        callback: LoadInitialCallback<MessageItem>
+    ) {
+        callback.onResult(messageItems, 0, 1)
+    }
 }

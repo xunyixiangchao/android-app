@@ -12,7 +12,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.database.Cursor
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.Point
 import android.hardware.SensorManager
 import android.media.MediaMetadataRetriever
@@ -68,6 +67,7 @@ import one.mixin.android.widget.gallery.MimeType
 import one.mixin.android.widget.gallery.engine.impl.GlideEngine
 import org.jetbrains.anko.configuration
 import org.jetbrains.anko.displayMetrics
+import org.jetbrains.anko.textColorResource
 import timber.log.Timber
 
 private val uiHandler = Handler(Looper.getMainLooper())
@@ -379,6 +379,23 @@ fun Context.openPermissionSetting() {
     toast(R.string.error_permission)
 }
 
+fun Context.openNotificationSetting() {
+    try {
+        val intent = Intent()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        } else {
+            intent.action = "android.settings.APP_NOTIFICATION_SETTINGS"
+        }
+        intent.putExtra("app_package", packageName)
+        intent.putExtra("app_uid", applicationInfo.uid)
+        startActivity(intent)
+    } catch (e: Exception) {
+        Timber.e(e)
+    }
+}
+
 fun Fragment.selectDocument() {
     selectMediaType("*/*", arrayOf("*/*"), REQUEST_FILE)
 }
@@ -548,6 +565,12 @@ inline fun <T : Number, R> T?.notEmptyWithElse(normalAction: (T) -> R, elseActio
     }
 }
 
+inline fun supportsQ(code: () -> Unit) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        code()
+    }
+}
+
 inline fun supportsPie(code: () -> Unit) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
         code()
@@ -624,7 +647,7 @@ fun Context.showConfirmDialog(
             dialog.dismiss()
         }.create().apply {
             setOnShowListener {
-                getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(Color.RED)
+                getButton(DialogInterface.BUTTON_POSITIVE).textColorResource = R.color.colorRed
             }
         }.show()
 }
@@ -639,3 +662,7 @@ fun Context.isNightMode(): Boolean {
         ) == Constants.Theme.THEME_NIGHT_ID
     }
 }
+
+fun Context.isLandscape() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+fun Context.isAutoRotate() = Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1

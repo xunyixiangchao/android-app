@@ -215,7 +215,7 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                             asset = linkViewModel.refreshAsset(assetId)
                         }
                         val paymentResponse = r.data!!
-                        if (asset != null && asset.destination.isNotEmpty()) {
+                        if (asset != null) {
                             authOrPay = true
                             showTransferBottom(paymentResponse.recipient, amount, asset, trace, memo, paymentResponse.status)
                             dismiss()
@@ -239,8 +239,8 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                 segments[0]
             }
             linkViewModel.searchCode(code).autoDispose(scopeProvider).subscribe({ result ->
-                when {
-                    result.first == QrCodeType.conversation.name -> {
+                when (result.first) {
+                    QrCodeType.conversation.name -> {
                         val response = result.second as ConversationResponse
                         val found = response.participants.find { it.userId == Session.getAccountId() }
                         if (found != null) {
@@ -253,7 +253,7 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                         }
                         dismiss()
                     }
-                    result.first == QrCodeType.user.name -> {
+                    QrCodeType.user.name -> {
                         val user = result.second as User
                         val account = Session.getAccount()
                         if (account != null && account.userId == (result.second as User).userId) {
@@ -263,7 +263,7 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                         }
                         dismiss()
                     }
-                    result.first == QrCodeType.authorization.name -> {
+                    QrCodeType.authorization.name -> {
                         val authorization = result.second as AuthorizationResponse
                         lifecycleScope.launch {
                             val assets = withContext(Dispatchers.IO) {
@@ -278,14 +278,14 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                             }
                         }
                     }
-                    result.first == QrCodeType.multisig_request.name -> {
+                    QrCodeType.multisig_request.name -> {
                         val multisigs = result.second as MultisigsResponse
                         lifecycleScope.launch {
                             var asset = linkViewModel.findAssetItemById(multisigs.assetId)
-                            if (asset == null || asset!!.destination.isEmpty()) {
+                            if (asset == null) {
                                 asset = linkViewModel.refreshAsset(multisigs.assetId)
                             }
-                            if (asset != null && asset!!.destination.isNotEmpty()) {
+                            if (asset != null) {
                                 val multisigsBiometricItem = Multi2MultiBiometricItem(
                                     requestId = multisigs.requestId,
                                     action = multisigs.action,
@@ -306,14 +306,14 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                             }
                         }
                     }
-                    result.first == QrCodeType.payment.name -> {
+                    QrCodeType.payment.name -> {
                         val paymentCodeResponse = result.second as PaymentCodeResponse
                         lifecycleScope.launch {
                             var asset = linkViewModel.findAssetItemById(paymentCodeResponse.assetId)
-                            if (asset == null || asset!!.destination.isEmpty()) {
+                            if (asset == null) {
                                 asset = linkViewModel.refreshAsset(paymentCodeResponse.assetId)
                             }
-                            if (asset != null && asset!!.destination.isNotEmpty()) {
+                            if (asset != null) {
                                 val multisigsBiometricItem = One2MultiBiometricItem(
                                     threshold = paymentCodeResponse.threshold,
                                     senders = arrayOf(Session.getAccountId()!!),
@@ -356,10 +356,10 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                             error(R.string.error_address_exists)
                         } else {
                             var asset = linkViewModel.findAssetItemById(assetId)
-                            if (asset == null || asset?.destination.isNullOrEmpty()) {
+                            if (asset == null) {
                                 asset = linkViewModel.refreshAsset(assetId)
                             }
-                            if (asset != null && asset!!.destination.isNotEmpty()) {
+                            if (asset != null) {
                                 PinAddrBottomSheetDialogFragment.newInstance(
                                     assetId = assetId,
                                     assetUrl = asset!!.iconUrl,
@@ -392,10 +392,10 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                 if (assetId != null && assetId.isUUID() && !destination.isNullOrEmpty() && !label.isNullOrEmpty()) {
                     lifecycleScope.launch {
                         var asset = linkViewModel.findAssetItemById(assetId)
-                        if (asset == null || asset?.destination.isNullOrEmpty()) {
+                        if (asset == null) {
                             asset = linkViewModel.refreshAsset(assetId)
                         }
-                        if (asset != null && asset!!.destination.isNotEmpty()) {
+                        if (asset != null) {
                             PinAddrBottomSheetDialogFragment.newInstance(
                                 assetId = assetId,
                                 assetUrl = asset!!.iconUrl,
@@ -486,7 +486,7 @@ class LinkBottomSheetDialogFragment : BottomSheetDialogFragment(), Injectable {
                         lifecycleScope.launch {
                             val address = linkViewModel.findAddressById(addressId, assetId)
                             var asset = linkViewModel.findAssetItemById(assetId)
-                            if (asset == null || asset?.destination.isNullOrEmpty()) {
+                            if (asset == null) {
                                 asset = linkViewModel.refreshAsset(assetId)
                             }
                             if (asset != null) {

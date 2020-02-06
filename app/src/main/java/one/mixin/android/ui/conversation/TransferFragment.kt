@@ -41,6 +41,7 @@ import one.mixin.android.Constants.ARGS_USER_ID
 import one.mixin.android.Constants.Account.PREF_HAS_WITHDRAWAL_ADDRESS_SET
 import one.mixin.android.Constants.ChainId.RIPPLE_CHAIN_ID
 import one.mixin.android.R
+import one.mixin.android.api.response.PaymentStatus
 import one.mixin.android.extension.appCompatActionBarHeight
 import one.mixin.android.extension.checkNumber
 import one.mixin.android.extension.defaultSharedPreferences
@@ -220,26 +221,6 @@ class TransferFragment : MixinBottomSheetDialogFragment() {
             operateKeyboard(false)
 
             when {
-                isInnerTransfer() && shouldShowTransferTip() -> {
-                    currentAsset?.let {
-                        val transferTipBottomSheetDialogFragment =
-                            TransferTipBottomSheetDialogFragment.newInstance(
-                                user?.fullName,
-                                it,
-                                BigDecimal(getAmount()).toDouble() * currentAsset!!.priceUsd.toDouble()
-                            )
-                        transferTipBottomSheetDialogFragment.showNow(
-                            parentFragmentManager,
-                            TransferTipBottomSheetDialogFragment.TAG
-                        )
-                        transferTipBottomSheetDialogFragment.callback =
-                            object : TransferTipBottomSheetDialogFragment.Callback {
-                                override fun onSuccess() {
-                                    showTransferBottom()
-                                }
-                            }
-                    }
-                }
                 isInnerTransfer() -> showTransferBottom()
                 shouldShowWithdrawalTip() -> {
                     currentAsset?.let {
@@ -260,16 +241,6 @@ class TransferFragment : MixinBottomSheetDialogFragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == REQUEST_CODE && resultCode == RESULT_CODE) {
             contentView.transfer_memo.setText(data?.getStringExtra(CaptureActivity.ARGS_MEMO_RESULT))
-        }
-    }
-
-    private fun shouldShowTransferTip(): Boolean {
-        if (currentAsset == null) return false
-        return try {
-            val amount = BigDecimal(getAmount()).toDouble() * currentAsset!!.priceUsd.toDouble()
-            amount >= (Session.getAccount()!!.transferConfirmationThreshold)
-        } catch (e: NumberFormatException) {
-            false
         }
     }
 
@@ -513,19 +484,20 @@ class TransferFragment : MixinBottomSheetDialogFragment() {
         }
 
         val biometricItem = if (user != null) {
-            TransferBiometricItem(user!!, currentAsset!!, amount, null, UUID.randomUUID().toString(), memo, "")
+            TransferBiometricItem(user!!, currentAsset!!, amount, null, UUID.randomUUID().toString(), memo, PaymentStatus.pending.name)
         } else {
             WithdrawBiometricItem(address!!.displayAddress(), address!!.addressId,
                 address!!.label, currentAsset!!, amount, null, UUID.randomUUID().toString(), memo, "")
         }
 
         val bottom = TransferBottomSheetDialogFragment.newInstance(biometricItem)
-        bottom.showNow(parentFragmentManager, TransferBottomSheetDialogFragment.TAG)
         bottom.callback = object : BiometricBottomSheetDialogFragment.Callback {
             override fun onSuccess() {
                 dialog?.dismiss()
+                callback?.onSuccess()
             }
         }
+        bottom.showNow(parentFragmentManager, TransferBottomSheetDialogFragment.TAG)
     }
 
     private val inputFilter = InputFilter { source, _, _, _, _, _ ->
@@ -621,4 +593,10 @@ class TransferFragment : MixinBottomSheetDialogFragment() {
     }
 
     class ItemHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+
+    var callback: Callback? = null
+
+    interface Callback {
+        fun onSuccess()
+    }
 }

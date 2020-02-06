@@ -33,6 +33,7 @@
     <string name="welcome" translatable="false">Welcome to Mixin</string>
     <string name="not_logged_in">Not logged in</string>
     <string name="got_it">Got it</string>
+    <string name="got_it_count">Got it (%1$d)</string>
     <string name="exit">Exit</string>
     <string name="receiver">Receiver</string>
     <string name="sender">Sender</string>
@@ -92,14 +93,19 @@
     <string name="verify_by_PIN">Verify by PIN</string>
     <string name="verify_by_biometric">Verify by Biometric</string>
     <string name="transfer_without_pin">You must setup PIN for transfer</string>
+    <string name="voice_call">Voice call</string>
+    <string name="phone_call">Phone call</string>
+    <string name="call_who">Call %1$s</string>
+    <string name="click_lock">Click to lock</string>
+    <string name="click_unlock">Click to unlock</string>
     <!--error-->
     <string name="error_no_connection">No network connection</string>
     <string name="error_connection_timeout">Network connection timeout</string>
     <string name="error_network">Network error</string>
     <string name="error_server_5xx">Server is under maintenance</string>
     <string name="error_data">Data error</string>
-    <string name="error_unknown_with_code">ERROR %1$d</string>
-    <string name="error_unknown_with_message">ERROR %1$s</string>
+    <string name="error_unknown_with_code">ERROR: %1$d</string>
+    <string name="error_unknown_with_message">ERROR: %1$s</string>
     <string name="error_forbidden">Access denied</string>
     <string name="error_not_found">ERROR %1$d: Not found</string>
     <string name="error_not_found_message">Not found</string>
@@ -113,6 +119,7 @@
     <string name="error_insufficient_balance">ERROR %1$d: Insufficient balance</string>
     <string name="error_invalid_pin_format">ERROR %1$d: Invalid PIN format</string>
     <string name="error_pin_incorrect">ERROR %1$d: PIN incorrect</string>
+    <string name="error_pin_incorrect_with_times">ERROR %1$d: PIN incorrect. You still have %2$d chances. Please wait for 24 hours to retry later.</string>
     <string name="error_too_small">ERROR %1$d: The amount is too small</string>
     <string name="error_user_not_found">User not found</string>
     <string name="error_app_not_found">App not found</string>
@@ -359,6 +366,7 @@
     <string name="wallet_add_asset_already">Asset already added</string>
     <string name="wallet_biometric_invalid">Invalid biometrics state, please reset in wallet setting.</string>
     <string name="wallet_setting_currency_desc" translatable="false">%1$s (%2$s)</string>
+    <string name="wallet_transactions_copy_tip">Copy to clipboard. Warning: this is NOT the deposit address.</string>
     <!--pin logs-->
     <string name="pin_logs">View PIN Incorrect Logs</string>
     <string name="pin_verification">Verify</string>
@@ -432,6 +440,7 @@
     <string name="conversation_status_live">Live</string>
     <string name="setting_no_blocked">No blocked users</string>
     <string name="setting_authentications">Authentications</string>
+    <string name="setting_no_authentications">No RESULT</string>
     <string name="setting_emergency">Emergency Contact</string>
     <string name="setting_emergency_content">The emergency contact is designed to help you log in to your account if you are lost and can not retrieve your mobile number.</string>
     <string name="setting_emergency_warning">Attention: the Emergency Contact cannot help you to recover PIN</string>
@@ -550,11 +559,17 @@
     <string name="alert_key_contact_audio_call_message">ask you an audio call</string>
     <string name="unread">New Messages</string>
     <string name="stranger_from">The sender is not in your contacts</string>
+    <string name="bot_interact_info">Click the button to interact with the bot</string>
+    <string name="bot_interact_open">Open Home page</string>
+    <string name="bot_interact_hi">Say Hi</string>
     <string name="notification_group">Group Notification</string>
     <string name="notification_message">Message Notification</string>
     <string name="notification_node">Messaging Node</string>
     <string name="notification_reply">Reply</string>
     <string name="notification_mark">Mark as read</string>
+    <string name="notification_settings">Settings</string>
+    <string name="notification_title">Turn On Notifications</string>
+    <string name="notification_content">Don\'t miss message from your friends.</string>
     <!--auth-->
     <string name="auth_request">Requests access to your</string>
     <string name="auth_public_profile">Public profile (required)</string>
@@ -588,6 +603,7 @@
     <string name="audio">Audio</string>
     <string name="live">Live</string>
     <string name="post">Post</string>
+    <string name="post_tag">POST</string>
     <!--pay-->
     <string name="pay_paid">This payment link has already been paid by someone, you can not make a duplicate payment.</string>
 

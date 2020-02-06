@@ -23,6 +23,7 @@ import one.mixin.android.db.ParticipantSessionDao
 import one.mixin.android.db.batchMarkReadAndTake
 import one.mixin.android.di.type.DatabaseCategory
 import one.mixin.android.di.type.DatabaseCategoryEnum
+import one.mixin.android.ui.media.pager.MediaPagerActivity
 import one.mixin.android.util.SINGLE_DB_THREAD
 import one.mixin.android.util.Session
 import one.mixin.android.vo.ChatMinimal
@@ -96,6 +97,8 @@ internal constructor(
 
     fun findMessageById(messageId: String) = messageDao.findMessageById(messageId)
 
+    suspend fun suspendFindMessageById(messageId: String) = messageDao.suspendFindMessageById(messageId)
+
     suspend fun saveDraft(conversationId: String, draft: String) =
         conversationDao.saveDraft(conversationId, draft)
 
@@ -135,14 +138,17 @@ internal constructor(
             messageDao.getMediaMessages(conversationId)
         }
         val config = PagedList.Config.Builder()
-            .setPrefetchDistance(PAGE_SIZE)
-            .setPageSize(PAGE_SIZE)
+            .setPrefetchDistance(MediaPagerActivity.PAGE_SIZE)
+            .setPageSize(MediaPagerActivity.PAGE_SIZE)
             .setEnablePlaceholders(true)
             .build()
         return LivePagedListBuilder(dataSource, config)
             .setInitialLoadKey(index)
             .build()
     }
+
+    suspend fun getMediaMessage(conversationId: String, messageId: String) =
+        readMessageDao.getMediaMessage(conversationId, messageId)
 
     suspend fun getConversationIdIfExistsSync(recipientId: String) =
         readConversationDao.getConversationIdIfExistsSync(recipientId)
@@ -261,8 +267,8 @@ internal constructor(
         }
     }
 
-    suspend fun findFirstUnreadMessageId(conversationId: String, userId: String): String? =
-        messageDao.findFirstUnreadMessageId(conversationId, userId)
+    suspend fun findFirstUnreadMessageId(conversationId: String, offset: Int): String? =
+        messageDao.findFirstUnreadMessageId(conversationId, offset)
 
     suspend fun findLastMessage(conversationId: String) = messageDao.findLastMessage(conversationId)
 
@@ -296,4 +302,6 @@ internal constructor(
         participantSessionDao.insertListSuspend(ps)
 
     suspend fun upgradeFtsMessage() = messageDao.upgradeFtsMessage()
+
+    suspend fun getAnnouncementByConversationId(conversationId: String) = conversationDao.getAnnouncementByConversationId(conversationId)
 }
