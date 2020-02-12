@@ -197,7 +197,7 @@ interface MessageDao : BaseDao<Message> {
             INNER JOIN users u ON c.owner_id = u.user_id
             INNER JOIN conversations c ON c.conversation_id = m.conversation_id
             INNER JOIN messages m ON m.id = mf4.message_id
-            WHERE mf4.content MATCH :query
+            WHERE messages_fts4 MATCH :query
             AND m.status != 'FAILED' 
             AND m.category IN('SIGNAL_TEXT', 'PLAIN_TEXT', 'SIGNAL_DATA', 'PLAIN_DATA', 'SIGNAL_POST', 'PLAIN_POST') 
             GROUP BY m.conversation_id
@@ -214,7 +214,7 @@ interface MessageDao : BaseDao<Message> {
             FROM messages_fts4 mf4 
             INNER JOIN users u ON m.user_id = u.user_id 
             INNER JOIN messages m ON m.id = mf4.message_id
-            WHERE mf4.content MATCH :query
+            WHERE messages_fts4 MATCH :query
             AND m.status != 'FAILED' 
             AND m.category IN ('SIGNAL_TEXT', 'PLAIN_TEXT', 'SIGNAL_DATA', 'PLAIN_DATA', 'SIGNAL_POST', 'PLAIN_POST') 
             AND m.conversation_id = :conversationId
